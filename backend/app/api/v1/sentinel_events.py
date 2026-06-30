@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import get_db, get_current_user, ensure_tenant
+from backend.app.core.config import Role
+from backend.app.core.security import get_db, get_current_user, ensure_tenant, require_roles
 from backend.app.models.user import User
 from backend.app.schemas.sentinel_event_schema import SentinelEventRead
 from backend.app.services.sentinel_event_service import list_events_for_project
@@ -11,7 +12,11 @@ from backend.app.models.project import Project
 router = APIRouter(prefix="/sentinel-events", tags=["sentinel"])
 
 
-@router.get("/project/{project_id}", response_model=list[SentinelEventRead])
+@router.get(
+    "/project/{project_id}",
+    response_model=list[SentinelEventRead],
+    dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER, Role.MEMBER, Role.CLIENT))],
+)
 async def get_project_events(
     project_id: str,
     db: Session = Depends(get_db),

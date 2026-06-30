@@ -1,0 +1,63 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+venv/
+ENV/
+backend/venv/
+backend/.venv/
+backend/.env
+backend/test_shared.db
+backend/tests/
+backend/**/*.db
+backend/**/*.sqlite
+backend/.pytest_cache
+
+agents/venv/
+agents/.venv/
+agents/.env
+agents/tests/
+
+# Node
+node_modules/
+frontend/app/node_modules
+frontend/app/dist
+frontend/app/.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+
+# Docs / Dev artifacts
+README.md
+SECURITY.md
+LICENSE
+Makefile
+scripts/*.ps1
+infra/terraform/.terraform
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/tfplan
+
+# Docker
+docker-compose*.yml
+.dockerignore
+
+# Local data
+*.db
+*.sqlite
+postgres_data/

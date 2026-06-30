@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import get_db, get_current_user, ensure_tenant
+from backend.app.core.config import Role
+from backend.app.core.security import get_db, get_current_user, ensure_tenant, require_roles
 from backend.app.models.user import User
 from backend.app.models.project import Project
 from backend.app.schemas.invoice_schema import InvoiceCreate, InvoiceRead
@@ -11,7 +12,11 @@ from backend.app.services.invoice_service import create_invoice, list_invoices_f
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 
-@router.post("/", response_model=InvoiceRead)
+@router.post(
+    "/",
+    response_model=InvoiceRead,
+    dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER, Role.MEMBER))],
+)
 async def create_invoice_endpoint(
     invoice_in: InvoiceCreate,
     db: Session = Depends(get_db),
@@ -24,7 +29,11 @@ async def create_invoice_endpoint(
     return create_invoice(db, invoice_in)
 
 
-@router.get("/project/{project_id}", response_model=list[InvoiceRead])
+@router.get(
+    "/project/{project_id}",
+    response_model=list[InvoiceRead],
+    dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER, Role.MEMBER, Role.CLIENT))],
+)
 async def list_project_invoices_endpoint(
     project_id: str,
     db: Session = Depends(get_db),

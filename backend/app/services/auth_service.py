@@ -57,3 +57,43 @@ def create_access_token(*, user: User, expires_delta: timedelta | None = None) -
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return Token(access_token=encoded_jwt)
+
+
+# ---------------------------------------------------------------------------
+# Admin / RBAC management services (adapted from Sentinel's auth_service).
+# ---------------------------------------------------------------------------
+
+
+def list_users(
+    db: Session,
+    *,
+    skip: int = 0,
+    limit: int = 100,
+    tenant_id: str | None = None,
+) -> list[User]:
+    """List users, optionally scoped to a single tenant."""
+    q = db.query(User)
+    if tenant_id is not None:
+        q = q.filter(User.tenant_id == tenant_id)
+    return q.order_by(User.created_at.desc() if hasattr(User, "created_at") else User.email).offset(skip).limit(limit).all()
+
+
+def update_user_role(db: Session, *, user_id: str, new_role: str) -> User | None:
+    """Change a user's role. Returns the updated user, or None if not found."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    user.role = new_role
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def deactivate_user(db: Session, *, user_id: str) -> bool:
+    """Soft-deactivate a user by flipping ``is_active`` to False."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return False
+    user.is_active = False
+    db.commit()
+    return True

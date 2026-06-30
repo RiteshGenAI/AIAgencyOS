@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import get_db, get_current_user, ensure_tenant
+from backend.app.core.config import Role
+from backend.app.core.security import get_db, get_current_user, ensure_tenant, require_roles
 from backend.app.models.project import Project
 from backend.app.models.user import User
 from backend.app.schemas.landing_page_schema import (
@@ -18,7 +19,11 @@ from backend.app.services.sentinel_service import (
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
-@router.post("/{project_id}/landing-page", response_model=ProductionLandingPageSchema)
+@router.post(
+    "/{project_id}/landing-page",
+    response_model=ProductionLandingPageSchema,
+    dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER, Role.MEMBER))],
+)
 async def generate_landing_page_copy(
     project_id: str,
     req: LandingPageRequestSchema,

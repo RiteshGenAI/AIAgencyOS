@@ -1,74 +1,120 @@
-import React, { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import Sidebar from './components/Sidebar'
+import { setToken } from './lib/api'
+import type { TokenResponse, UserSession } from './types'
 
-import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
-import ProjectPage from './pages/ProjectPage'
-import { getStoredSession, logout, setToken, type TokenResponse } from './lib/api'
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const ProjectPage = lazy(() => import('./pages/ProjectPage'))
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'))
+const LeadsPage = lazy(() => import('./pages/LeadsPage'))
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'))
+const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'))
+const SentinelEventsPage = lazy(() => import('./pages/SentinelEventsPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
 
-function AppRoutes() {
-  const [session, setSession] = useState<TokenResponse | null>(null)
+function App() {
+  const [user, setUser] = useState<UserSession | null>(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
+  const logout = useCallback(() => {
+    setUser(null)
+    setToken(null)
+    navigate('/login')
+  }, [navigate])
+
   useEffect(() => {
-    const saved = getStoredSession()
-    if (saved) {
-      setToken(saved.access_token)
-      setSession(saved)
+    const savedSession = localStorage.getItem('session')
+    if (savedSession) {
+      try {
+        const parsed: TokenResponse = JSON.parse(savedSession)
+        setToken(parsed.access_token)
+        setUser(parsed.user)
+      } catch {
+        setToken(null)
+        localStorage.removeItem('session')
+      }
     }
     setLoading(false)
   }, [])
 
   const handleLogin = (data: TokenResponse) => {
-    setSession(data)
-    navigate('/')
-  }
-
-  const handleLogout = () => {
-    logout()
-    setSession(null)
-    navigate('/login')
+    setToken(data.access_token)
+    setUser(data.user)
+    localStorage.setItem('session', JSON.stringify(data))
+    navigate('/dashboard')
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
-        Loading...
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center">
+        <div className="animate-pulse text-slate-500">Loading...</div>
       </div>
     )
   }
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={session ? <Navigate to="/" replace /> : <LoginPage onLogin={handleLogin} />}
-      />
-      <Route
-        path="/"
-        element={
-          session ? (
-            <DashboardPage user={session.user} onLogout={handleLogout} />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-      <Route
-        path="/projects/:projectId"
-        element={session ? <ProjectPage user={session.user} /> : <Navigate to="/login" replace />}
-      />
-      <Route path="*" element={<Navigate to={session ? '/' : '/login'} replace />} />
-    </Routes>
-  )
-}
-
-function App() {
-  return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col lg:flex-row">
+      {user && <Sidebar user={user} onLogout={logout} />}
+      <div className={`flex-1 min-w-0 ${user ? 'pt-16 lg:pt-0 lg:pl-64' : ''}`}>
+        <Suspense
+          fallback={
+            <div className="mx-auto w-full max-w-[1440px] px-8 py-20 flex flex-col items-center justify-center space-y-4">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-cyan-600" />
+              <p className="text-sm font-medium text-slate-500">Loading page...</p>
+            </div>
+          }
+        >
+          <Routes>
+            <Route
+              path="/login"
+              element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />}
+            />
+            <Route
+              path="/dashboard"
+              element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/projects"
+              element={user ? <ProjectsPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/projects/:projectId"
+              element={user ? <ProjectPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/leads"
+              element={user ? <LeadsPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/invoices"
+              element={user ? <InvoicesPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/workflows"
+              element={user ? <WorkflowsPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/sentinel-events"
+              element={user ? <SentinelEventsPage user={user} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/admin"
+              element={
+                user
+                  ? user.role === 'owner'
+                    ? <AdminPage />
+                    : <Navigate to="/dashboard" />
+                  : <Navigate to="/login" />
+              }
+            />
+            <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </div>
   )
 }
 

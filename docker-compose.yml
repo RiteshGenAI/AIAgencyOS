@@ -1,75 +1,122 @@
-version: '3.9'
+# Development compose file.
+# Services run with hot-reload and are exposed on separate ports for easy local testing.
+#
+# ⚠️  SECURITY WARNING:
+# The default POSTGRES_PASSWORD and BACKEND_SECRET_KEY below are development
+# defaults. Change both to strong random values before any real/non-local deployment.
 
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: agency_os
+      POSTGRES_USER: ${POSTGRES_USER:-agency_os}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agency_os}
+      POSTGRES_DB: ${POSTGRES_DB:-agency_os}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d agency_os']
-      interval: 5s
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-agency_os} -d ${POSTGRES_DB:-agency_os}']
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - agency_os
 
   backend:
     build:
       context: .
-      dockerfile: docker/Dockerfile.backend
-    working_dir: /app
-    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        WORKDIR /app
+        ENV PYTHONUNBUFFERED=1
+        COPY backend/requirements.txt /tmp/requirements.txt
+        RUN pip install --no-cache-dir -r /tmp/requirements.txt
+        COPY backend /app/backend
+        CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+    environment:
+      BACKEND_DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-agency_os}:${POSTGRES_PASSWORD:-agency_os}@db:5432/${POSTGRES_DB:-agency_os}
+      BACKEND_SECRET_KEY: ${BACKEND_SECRET_KEY:-agency-os-docker-dev-secret-key-change-in-production}
+      BACKEND_ENV: local
+      BACKEND_SEED_ADMIN: ${BACKEND_SEED_ADMIN:-true}
+      BACKEND_AGENTS_SERVICE_URL: http://agents:8081
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./backend:/app/backend
-    environment:
-      BACKEND_DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/agency_os
-      BACKEND_SECRET_KEY: agency-os-docker-dev-secret-change-in-production
-      BACKEND_ENV: local
-      BACKEND_AGENTS_SERVICE_URL: http://agents:8081
-      BACKEND_CORS_ORIGINS: http://localhost:5173
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'python -c "import urllib.request; urllib.request.urlopen(\'http://localhost:8000/healthz\')"']
-      interval: 10s
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"
+      interval: 15s
       timeout: 5s
       retries: 5
-    ports:
-      - '8000:8000'
+    networks:
+      - agency_os
 
   agents:
     build:
       context: .
-      dockerfile: docker/Dockerfile.agents
-    working_dir: /app
-    command: uvicorn agents.app.main:app --host 0.0.0.0 --port 8081 --reload
-    volumes:
-      - ./agents:/app/agents
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        WORKDIR /app
+        ENV PYTHONUNBUFFERED=1
+        COPY agents/requirements.txt /tmp/requirements.txt
+        RUN pip install --no-cache-dir -r /tmp/requirements.txt
+        COPY agents /app/agents
+        CMD ["uvicorn", "agents.app.main:app", "--host", "0.0.0.0", "--port", "8081", "--reload"]
+    restart: unless-stopped
+    ports:
+      - '9000:8081'
     environment:
       STRANDS_SENTINEL_BASE_URL: http://backend:8000/internal/sentinel
       STRANDS_ENV: local
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434}
+    volumes:
+      - ./agents:/app/agents
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - '8081:8081'
+    networks:
+      - agency_os
 
   frontend:
-    image: node:20
-    working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:20-alpine
+        WORKDIR /app
+        COPY frontend/app/package.json frontend/app/package-lock.json* ./
+        RUN npm install
+        COPY frontend/app .
+        EXPOSE 5173
+        CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    restart: unless-stopped
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
     volumes:
       - ./frontend/app:/app
+      - /app/node_modules
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - '5173:5173'
+    networks:
+      - agency_os
 
 volumes:
   postgres_data:
+
+networks:
+  agency_os:
+    driver: bridge

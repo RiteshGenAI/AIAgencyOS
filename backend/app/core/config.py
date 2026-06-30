@@ -1,7 +1,25 @@
+from enum import StrEnum
 from functools import lru_cache
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+
+
+class Role(StrEnum):
+    """Tenant-scoped role hierarchy used for RBAC across AI Agency OS.
+
+    Adapted from Sentinel's Role enum to fit this repo's multi-tenant model.
+    Order matters: OWNER > MANAGER > MEMBER > CLIENT.
+    """
+
+    OWNER = "owner"
+    MANAGER = "manager"
+    MEMBER = "member"
+    CLIENT = "client"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {r.value for r in cls}
 
 
 class Settings(BaseSettings):

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import get_db, get_current_user, ensure_tenant
+from backend.app.core.config import Role
+from backend.app.core.security import get_db, get_current_user, ensure_tenant, require_roles
 from backend.app.models.project import Project
 from backend.app.models.user import User
 from backend.app.schemas.project_schema import ProjectCreate, ProjectRead
@@ -17,7 +18,7 @@ from backend.app.services.agent_service import call_landing_page_agent
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-@router.post("/", response_model=ProjectRead)
+@router.post("/", response_model=ProjectRead, dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER))])
 async def create_project_endpoint(
     project_in: ProjectCreate,
     db: Session = Depends(get_db),
@@ -27,7 +28,11 @@ async def create_project_endpoint(
     return create_project(db, project_in)
 
 
-@router.get("/{tenant_id}", response_model=list[ProjectRead])
+@router.get(
+    "/{tenant_id}",
+    response_model=list[ProjectRead],
+    dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER, Role.MEMBER, Role.CLIENT))],
+)
 async def list_projects_endpoint(
     tenant_id: str,
     db: Session = Depends(get_db),
@@ -37,7 +42,11 @@ async def list_projects_endpoint(
     return list_projects(db, tenant_id)
 
 
-@router.post("/{project_id}/scope", response_model=ProjectRead)
+@router.post(
+    "/{project_id}/scope",
+    response_model=ProjectRead,
+    dependencies=[Depends(require_roles(Role.OWNER, Role.MANAGER))],
+)
 async def scope_project_with_landing_workflow(
     project_id: str,
     request: LandingPageRequestSchema,

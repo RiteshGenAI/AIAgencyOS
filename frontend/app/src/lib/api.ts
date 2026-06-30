@@ -1,6 +1,7 @@
-import type { TokenResponse, UserSession } from '../types'
+import type { TokenResponse } from '../types'
 
-const baseURL = '/api/v1'
+const isDev = (import.meta as any).env?.DEV
+const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || (isDev ? 'http://localhost:8000/api/v1' : '/api/v1')
 
 export function setToken(token: string | null) {
   if (token) {
@@ -39,36 +40,49 @@ async function request(path: string, options: RequestInit = {}) {
   try {
     response = await fetch(url, { ...options, headers })
   } catch (err: any) {
-    throw new Error(err.message || 'Network error')
+    const error: any = new Error(err.message || 'Network error')
+    error.response = { status: 0, data: { detail: 'Network error or server unreachable' } }
+    throw error
   }
 
   if (response.status === 401) {
     setToken(null)
+    localStorage.removeItem('session')
     window.location.href = '/login'
     throw new Error('Unauthorized')
   }
 
   const contentType = response.headers.get('content-type')
-  const data =
-    contentType && contentType.includes('application/json')
-      ? await response.json()
-      : await response.text()
+  const data = contentType && contentType.includes('application/json') ? await response.json() : await response.text()
 
   if (!response.ok) {
-    const detail = typeof data === 'object' && data?.detail ? data.detail : data
-    throw new Error(detail || response.statusText)
+    const error: any = new Error(data?.detail || 'Request failed')
+    error.response = { status: response.status, data }
+    throw error
   }
 
-  return data
+  return { data }
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const payload = token.split('.')[1]
-    return JSON.parse(atob(payload))
-  } catch {
-    return null
-  }
+const api = {
+  get: <T = any>(url: string, options?: RequestInit) =>
+    request(url, { method: 'GET', ...options }) as Promise<{ data: T }>,
+  post: <T = any>(url: string, body?: any, options?: RequestInit) =>
+    request(url, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      ...options,
+    }) as Promise<{ data: T }>,
+  put: <T = any>(url: string, body?: any, options?: RequestInit) =>
+    request(url, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      ...options,
+    }) as Promise<{ data: T }>,
+  delete: <T = any>(url: string, options?: RequestInit) =>
+    request(url, { method: 'DELETE', ...options }) as Promise<{ data: T }>,
 }
 
 export async function login(email: string, password: string): Promise<TokenResponse> {
@@ -79,50 +93,14 @@ export async function login(email: string, password: string): Promise<TokenRespo
     body,
   })
 
+  const contentType = response.headers.get('content-type')
+  const data = contentType && contentType.includes('application/json') ? await response.json() : await response.text()
+
   if (!response.ok) {
-    const text = await response.text()
-    let message = text
-    try {
-      const parsed = JSON.parse(text)
-      message = parsed.detail || JSON.stringify(parsed)
-    } catch {
-      // keep raw text
-    }
-    throw new Error(message || response.statusText)
+    throw new Error(data?.detail || 'Login failed')
   }
 
-  const tokenData = await response.json()
-  const claims = decodeJwtPayload(tokenData.access_token) || {}
-  const session: TokenResponse = {
-    access_token: tokenData.access_token,
-    token_type: tokenData.token_type || 'bearer',
-    user: {
-      id: String(claims.sub || ''),
-      tenant_id: String(claims.tenant_id || ''),
-      email,
-      role: String(claims.role || 'member'),
-    },
-  }
-
-  setToken(session.access_token)
-  localStorage.setItem('session', JSON.stringify(session))
-  return session
+  return data as TokenResponse
 }
 
-export function logout() {
-  setToken(null)
-}
-
-export async function fetchProjects(tenantId: string) {
-  return request(`/projects/${tenantId}`)
-}
-
-export async function fetchProjectSentinelEvents(projectId: string) {
-  return request(`/sentinel-events/project/${projectId}`)
-}
-
-export async function fetchProjectInvoices(projectId: string) {
-  return request(`/invoices/project/${projectId}`)
-}
-
-export type { UserSession, TokenResponse }
+export default api
