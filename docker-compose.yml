@@ -1,0 +1,75 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agency_os
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d agency_os']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    working_dir: /app
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      BACKEND_DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/agency_os
+      BACKEND_SECRET_KEY: agency-os-docker-dev-secret-change-in-production
+      BACKEND_ENV: local
+      BACKEND_AGENTS_SERVICE_URL: http://agents:8081
+      BACKEND_CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'python -c "import urllib.request; urllib.request.urlopen(\'http://localhost:8000/healthz\')"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - '8000:8000'
+
+  agents:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agents
+    working_dir: /app
+    command: uvicorn agents.app.main:app --host 0.0.0.0 --port 8081 --reload
+    volumes:
+      - ./agents:/app/agents
+    environment:
+      STRANDS_SENTINEL_BASE_URL: http://backend:8000/internal/sentinel
+      STRANDS_ENV: local
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '8081:8081'
+
+  frontend:
+    image: node:20
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend/app:/app
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '5173:5173'
+
+volumes:
+  postgres_data:

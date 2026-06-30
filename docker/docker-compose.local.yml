@@ -1,0 +1,53 @@
+version: '3.9'
+
+# Legacy path kept for compatibility. Prefer root docker-compose.yml instead.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agency_os
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    environment:
+      BACKEND_DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/agency_os
+      BACKEND_SECRET_KEY: agency-os-docker-dev-secret-change-in-production
+      BACKEND_ENV: local
+      BACKEND_AGENTS_SERVICE_URL: http://agents:8081
+      BACKEND_CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  agents:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.agents
+    environment:
+      STRANDS_SENTINEL_BASE_URL: http://backend:8000/internal/sentinel
+    depends_on:
+      - backend
+    ports:
+      - "8081:8081"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:

@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+httpx
+pydantic>=2.0
+pydantic-settings
+openai
+anthropic
+requests

@@ -1,0 +1,39 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_REGION = 'ap-south-1'
+    PROJECT    = 'ai-agency-os'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build Docker Images') {
+      steps {
+        sh 'docker build -f docker/Dockerfile.backend -t ${PROJECT}-backend:latest .'
+        sh 'docker build -f docker/Dockerfile.agents -t ${PROJECT}-agents:latest .'
+        sh 'docker build -f docker/Dockerfile.frontend -t ${PROJECT}-frontend:latest .'
+      }
+    }
+
+    stage('Push to ECR') {
+      steps {
+        echo 'TODO: Implement ECR login and docker push commands'
+      }
+    }
+
+    stage('Terraform Apply') {
+      steps {
+        dir('infra/terraform') {
+          sh 'terraform init'
+          sh 'terraform apply -auto-approve'
+        }
+      }
+    }
+  }
+}

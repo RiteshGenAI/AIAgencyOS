@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agency_os
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d agency_os']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    restart: unless-stopped
+    environment:
+      BACKEND_DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/agency_os
+      BACKEND_SECRET_KEY: ${BACKEND_SECRET_KEY:-agency-os-docker-dev-secret-change-in-production}
+      BACKEND_ENV: ${BACKEND_ENV:-local}
+      BACKEND_AGENTS_SERVICE_URL: http://agents:8081
+      BACKEND_CORS_ORIGINS: http://localhost
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'python -c "import urllib.request; urllib.request.urlopen(\'http://localhost:8000/healthz\')"']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  agents:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agents
+    restart: unless-stopped
+    environment:
+      STRANDS_SENTINEL_BASE_URL: http://backend:8000/internal/sentinel
+      STRANDS_ENV: local
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '80:80'
+
+volumes:
+  postgres_data:
