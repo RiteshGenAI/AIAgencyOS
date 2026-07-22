@@ -25,7 +25,10 @@ async def create_project_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> ProjectRead:
     ensure_tenant(current_user, project_in.tenant_id)
-    return create_project(db, project_in)
+    try:
+        return create_project(db, project_in)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get(

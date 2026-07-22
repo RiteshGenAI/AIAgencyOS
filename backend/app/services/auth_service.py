@@ -7,6 +7,7 @@ from jose import jwt
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Role, settings
+from backend.app.models.tenant import Tenant
 from backend.app.models.user import User
 from backend.app.schemas.user_schema import SignupRequest, Token, UserRead, UserSession
 
@@ -30,6 +31,16 @@ def create_user(db: Session, user_in: SignupRequest) -> UserRead:
     existing = db.query(User).filter(User.email == user_in.email.strip().lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Auto-create tenant if it does not already exist. This prevents FK violations
+    # when the client supplies a new tenant_id that has not been pre-provisioned.
+    tenant = db.query(Tenant).filter(Tenant.id == user_in.tenant_id).first()
+    if not tenant:
+        tenant = Tenant(id=user_in.tenant_id, name=f"Tenant {user_in.tenant_id}")
+        db.add(tenant)
+        db.commit()
+        db.refresh(tenant)
+
     user = User(
         id=str(uuid.uuid4()),
         tenant_id=user_in.tenant_id,

@@ -1,11 +1,17 @@
 import uuid
 from sqlalchemy.orm import Session
 
+from backend.app.models.client import Client
 from backend.app.models.project import Project
+from backend.app.models.tenant import Tenant
 from backend.app.schemas.project_schema import ProjectCreate, ProjectRead
 
 
 def create_project(db: Session, project_in: ProjectCreate) -> ProjectRead:
+    if not db.query(Tenant).filter(Tenant.id == project_in.tenant_id).first():
+        raise ValueError("Tenant not found")
+    if not db.query(Client).filter(Client.id == project_in.client_id).first():
+        raise ValueError("Client not found")
     project = Project(
         id=str(uuid.uuid4()),
         tenant_id=project_in.tenant_id,
