@@ -90,12 +90,16 @@ Built around a FastAPI backend, a React frontend, a dedicated agents microservic
 
 **Features**:
 - List all projects for the authenticated user's tenant
-- Create new projects with name, description, and client ID
+- Create new projects with name and description
+- Select clients using human-readable reference IDs (e.g., `CID-0001`) via dropdown
+- Inline client creation from the project form with auto-generated CID
 - Project status badges (e.g., draft, active, scoped)
 - Navigation to individual project detail pages
 - Empty-state guidance for first-time users
 
 **Access**: All authenticated users
+
+**Client Selection**: The project creation form provides a dropdown of existing clients labeled by their human-readable `reference_id` (e.g., `CID-0001 - Acme Corp`). You can also create a new client inline; the system auto-assigns the next available CID per tenant.
 
 ---
 
@@ -261,15 +265,17 @@ You can also explore and test all authenticated endpoints through the Swagger UI
 ### 4. Create a Project
 1.  Navigate to the **Projects** page in the sidebar.
 2.  Click **Create Project**.
-3.  Enter a project name, optional description, and client ID.
-4.  Click **Create**.
+3.  Enter a project name and optional description.
+4.  Select a client from the dropdown (human-readable IDs like `CID-0001`).
+    - If no clients exist, click **+ New Client** to create one inline. The system will auto-assign the next available `CID-XXXX` reference ID.
+5.  Click **Create**.
 
-You can also create projects via the API:
+You can also create projects via the API. The `client_id` field accepts either the internal UUID or the human-readable `reference_id` (e.g., `CID-0001`); the backend resolves it automatically:
 ```bash
 curl -X POST http://localhost:8000/api/v1/projects/ \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"tenant_id":"default","client_id":"client-1","name":"My Project"}'
+  -d '{"tenant_id":"default","client_id":"CID-0001","name":"My Project"}'
 ```
 
 ### 5. Run a Workflow
@@ -281,7 +287,7 @@ curl -X POST http://localhost:8000/api/v1/workflows/PROJECT_ID/landing-page \
   -H "Content-Type: application/json" \
   -d '{
     "tenant_id": "default",
-    "client_id": "client-1",
+    "client_id": "CID-0001",
     "project_id": "PROJECT_ID",
     "policy_id": "default",
     "brief_text": "Write landing page copy for an AI consulting agency"
@@ -480,8 +486,12 @@ Configure the stack via environment variables or a `.env` file in the project ro
 *   `PUT /api/v1/admin/users/{user_id}/role` — Change user role (owner only)
 *   `DELETE /api/v1/admin/users/{user_id}` — Deactivate user (owner only)
 
+### Clients
+*   `POST /api/v1/clients/` — Create a client (owner, manager). Accepts optional `reference_id`; if omitted, a sequential `CID-XXXX` ID is auto-generated per tenant.
+*   `GET /api/v1/clients/{tenant_id}` — List clients for a tenant (all roles)
+
 ### Projects
-*   `POST /api/v1/projects/` — Create a project (owner, manager)
+*   `POST /api/v1/projects/` — Create a project (owner, manager). The `client_id` field accepts either the internal UUID or the human-readable `reference_id` (e.g., `CID-0001`).
 *   `GET /api/v1/projects/{tenant_id}` — List projects for a tenant (all roles)
 *   `POST /api/v1/projects/{project_id}/scope` — Scope a project with landing-page workflow output (owner, manager)
 
@@ -514,7 +524,7 @@ Configure the stack via environment variables or a `.env` file in the project ro
 ### Core Entities
 *   **User**: Agency users with tenant scoping, email, hashed password, role (`owner`/`manager`/`member`/`client`), and active status.
 *   **Tenant**: Top-level organization unit. All users, projects, leads, and invoices are scoped to a tenant.
-*   **Client**: Client record linked to a tenant, used for project and lead attribution.
+*   **Client**: Client record linked to a tenant, used for project and lead attribution. Each client has a human-readable `reference_id` (e.g., `CID-0001`) that is unique within the tenant and can be used in place of the internal UUID in API requests.
 *   **Project**: Agency project with name, description, status, and scoped summary for workflow outputs.
 *   **Lead**: Sales lead with source, raw text, status, and optional project/client binding.
 *   **Invoice**: Financial invoice with amount, currency, status, due date, and project binding.
