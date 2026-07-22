@@ -47,6 +47,14 @@ export type Invoice = {
   updated_at: string
 }
 
+export type Client = {
+  id: string
+  tenant_id: string
+  name: string
+  contact_email: string | null
+  reference_id: string
+}
+
 export type SentinelEvent = {
   id: string
   tenant_id: string

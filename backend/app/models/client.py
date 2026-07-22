@@ -11,5 +11,6 @@ class Client(Base):
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False)
     name = Column(String, nullable=False)
     contact_email = Column(String, nullable=True)
+    reference_id = Column(String, nullable=False, index=True)  # human-readable ID like CID-0001
 
     tenant = relationship("Tenant")

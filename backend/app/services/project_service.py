@@ -7,15 +7,32 @@ from backend.app.models.tenant import Tenant
 from backend.app.schemas.project_schema import ProjectCreate, ProjectRead
 
 
+def _resolve_client_id(db: Session, tenant_id: str, client_id: str) -> str:
+    """Resolve a client reference_id or UUID to the actual client UUID."""
+    if not client_id:
+        raise ValueError("client_id is required")
+
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if client:
+        return client.id
+
+    client = db.query(Client).filter(Client.tenant_id == tenant_id, Client.reference_id == client_id).first()
+    if client:
+        return client.id
+
+    raise ValueError(f"Client '{client_id}' not found")
+
+
 def create_project(db: Session, project_in: ProjectCreate) -> ProjectRead:
     if not db.query(Tenant).filter(Tenant.id == project_in.tenant_id).first():
         raise ValueError("Tenant not found")
-    if not db.query(Client).filter(Client.id == project_in.client_id).first():
-        raise ValueError("Client not found")
+
+    resolved_client_id = _resolve_client_id(db, project_in.tenant_id, project_in.client_id)
+
     project = Project(
         id=str(uuid.uuid4()),
         tenant_id=project_in.tenant_id,
-        client_id=project_in.client_id,
+        client_id=resolved_client_id,
         name=project_in.name,
         status="draft",
     )

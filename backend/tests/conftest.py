@@ -229,6 +229,7 @@ def seed_tenant_client():
             tenant_id="tenant-1",
             name="Test Client",
             contact_email="client-1@example.com",
+            reference_id="CID-0001",
         )
         db.merge(tenant)
         db.merge(client_row)

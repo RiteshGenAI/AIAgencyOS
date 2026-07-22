@@ -20,6 +20,7 @@ from backend.app.api.v1.sentinel_events import router as sentinel_events_router
 from backend.app.api.v1.invoices import router as invoices_router
 from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.admin import router as admin_router
+from backend.app.api.v1.clients import router as clients_router
 from backend.app.api.internal.sentinel import router as internal_sentinel_router
 
 
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(invoices_router, prefix=settings.API_V1_STR)
     app.include_router(health_router, prefix=settings.API_V1_STR)
     app.include_router(admin_router, prefix=settings.API_V1_STR)
+    app.include_router(clients_router, prefix=settings.API_V1_STR)
     app.include_router(internal_sentinel_router)
 
     @app.get("/healthz")

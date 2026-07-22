@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
-import type { Project, UserSession } from '../types'
+import type { Project, UserSession, Client } from '../types'
 
 type Props = {
   user: UserSession
@@ -9,21 +9,28 @@ type Props = {
 
 export default function ProjectsPage({ user }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [clientId, setClientId] = useState('')
+  const [newClientName, setNewClientName] = useState('')
+  const [creatingClient, setCreatingClient] = useState(false)
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
-      const { data } = await api.get<Project[]>(`/projects/${user.tenant_id}`)
-      setProjects(data)
+      const [{ data: proj }, { data: cli }] = await Promise.all([
+        api.get<Project[]>(`/projects/${user.tenant_id}`),
+        api.get<Client[]>(`/clients/${user.tenant_id}`),
+      ])
+      setProjects(proj)
+      setClients(cli)
     } catch (err: any) {
-      setError(err?.message || 'Failed to load projects')
+      setError(err?.message || 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -33,13 +40,30 @@ export default function ProjectsPage({ user }: Props) {
     void load()
   }, [user.tenant_id])
 
+  const createClient = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    try {
+      const { data } = await api.post<Client>('/clients/', {
+        tenant_id: user.tenant_id,
+        name: newClientName,
+      })
+      setClients((prev) => [...prev, data])
+      setClientId(data.reference_id)
+      setNewClientName('')
+      setCreatingClient(false)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create client')
+    }
+  }
+
   const create = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     try {
       await api.post('/projects/', {
         tenant_id: user.tenant_id,
-        client_id: clientId || 'default-client',
+        client_id: clientId,
         name,
         description,
       })
@@ -84,10 +108,7 @@ export default function ProjectsPage({ user }: Props) {
       )}
 
       {creating && (
-        <form
-          onSubmit={create}
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4"
-        >
+        <form onSubmit={create} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
           <h3 className="text-lg font-bold text-slate-900">New Project</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -100,13 +121,20 @@ export default function ProjectsPage({ user }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client ID</label>
-              <input
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client</label>
+              <select
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                placeholder="default-client"
-              />
+                required
+              >
+                <option value="">Select client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.reference_id}>
+                    {c.reference_id} - {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div>
@@ -118,6 +146,46 @@ export default function ProjectsPage({ user }: Props) {
               rows={3}
             />
           </div>
+
+          {!creatingClient ? (
+            <button
+              type="button"
+              onClick={() => setCreatingClient(true)}
+              className="text-xs font-bold text-cyan-600 hover:underline"
+            >
+              + New Client
+            </button>
+          ) : (
+            <form onSubmit={createClient} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+              <h4 className="text-sm font-bold text-slate-900">New Client</h4>
+              <input
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                placeholder="Client name"
+                required
+              />
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:brightness-105 transition"
+                >
+                  Create Client
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreatingClient(false)
+                    setNewClientName('')
+                  }}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
           <button
             type="submit"
             className="rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:brightness-105 transition duration-200"

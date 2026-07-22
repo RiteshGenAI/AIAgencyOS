@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../lib/api'
-import type { Lead, UserSession } from '../types'
+import type { Lead, UserSession, Client } from '../types'
 
 type Props = {
   user: UserSession
@@ -8,6 +8,7 @@ type Props = {
 
 export default function LeadsPage({ user }: Props) {
   const [leads, setLeads] = useState<Lead[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
@@ -15,15 +16,20 @@ export default function LeadsPage({ user }: Props) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
+  const [clientId, setClientId] = useState('')
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
-      const { data } = await api.get<Lead[]>(`/leads/${user.tenant_id}`)
-      setLeads(data)
+      const [{ data: leadsData }, { data: clientsData }] = await Promise.all([
+        api.get<Lead[]>(`/leads/${user.tenant_id}`),
+        api.get<Client[]>(`/clients/${user.tenant_id}`),
+      ])
+      setLeads(leadsData)
+      setClients(clientsData)
     } catch (err: any) {
-      setError(err?.message || 'Failed to load leads')
+      setError(err?.message || 'Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -39,17 +45,19 @@ export default function LeadsPage({ user }: Props) {
     try {
       await api.post('/leads/', {
         tenant_id: user.tenant_id,
+        client_id: clientId || undefined,
         name,
-        email: email || null,
-        phone: phone || null,
-        notes: notes || null,
+        email: email || undefined,
+        phone: phone || undefined,
+        notes: notes || undefined,
         source: 'web',
-        raw_text: `${name} ${email} ${phone} ${notes}`,
+        raw_text: [name, email, phone, notes].filter(Boolean).join(' | ') || name,
       })
       setName('')
       setEmail('')
       setPhone('')
       setNotes('')
+      setClientId('')
       setCreating(false)
       await load()
     } catch (err: any) {
@@ -92,21 +100,27 @@ export default function LeadsPage({ user }: Props) {
           <h3 className="text-lg font-bold text-slate-900">New Lead</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client</label>
+              <select
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+              >
+                <option value="">No client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.reference_id}>
+                    {c.reference_id} - {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Name</label>
               <input
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Email</label>
-              <input
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
               />
             </div>
           </div>
