@@ -2,7 +2,7 @@
   <img src="frontend/app/public/AIAgencyOS_Logo.png" alt="AI Agency OS Logo" width="650">
 </p>
 
-# AI Agency OS — AI-Native Agency Operating System
+# AI Agency OS - AI-Native Agency Operating System
 
 **AI Agency OS** is a production-ready, AI-native operating system for modern agencies. It orchestrates Strands-style agent workflows, enforces policy checks powered by [Sentinel](https://github.com/RiteshGenAI/Sentinel.git), and provides a multi-tenant backend with JWT authentication, project management, lead tracking, invoicing, and real-time workflow execution.
 
@@ -16,7 +16,7 @@ Built around a FastAPI backend, a React frontend, a dedicated agents microservic
 
 ### Multi-Tenant Agency Backend
 *   **JWT-Based Authentication**: Secure user registration and login with access token expiration, JSON-body login, and tenant-scoped access control.
-*   **Role-Based Access Control (RBAC)**: Four enforced roles — `owner`, `manager`, `member`, `client` — with per-endpoint permission checks. Owners can manage users, managers can create projects, members can create leads, and clients have read-only access to assigned resources.
+*   **Role-Based Access Control (RBAC)**: Four enforced roles - `owner`, `manager`, `member`, `client` - with per-endpoint permission checks. Owners can manage users, managers can create projects, members can create leads, and clients have read-only access to assigned resources.
 *   **Project Management**: Create and manage projects per tenant with full CRUD capabilities and status tracking.
 *   **Lead Tracking**: Capture and manage agency leads linked to tenants and projects with lifecycle status tracking.
 *   **Invoicing**: Generate and track invoices for agency work and project deliverables, scoped by project.
@@ -40,7 +40,7 @@ Built around a FastAPI backend, a React frontend, a dedicated agents microservic
 *   **Owner Safeguards**: Admin endpoints prevent the last active owner from being deactivated or demoted, ensuring the system is never orphaned.
 
 ### Production Deployment
-*   **Single-File Docker Compose**: All services are built inline in `docker-compose.yml` — no separate Dockerfiles required.
+*   **Single-File Docker Compose**: All services are built inline in `docker-compose.yml` - no separate Dockerfiles required.
 *   **AWS Terraform Templates**: Production-ready infrastructure (VPC, ECS Fargate, RDS PostgreSQL, ALB, ECR, Secrets Manager, S3) under `infra/terraform/`.
 *   **Database Migrations**: Safe incremental migration script (`backend/migrate.py`) for adding missing schema changes.
 *   **Nginx Reverse Proxy**: The frontend container serves the built React app and proxies `/api/*` traffic to the backend.
@@ -184,8 +184,8 @@ Built around a FastAPI backend, a React frontend, a dedicated agents microservic
 **Features**:
 - **User Management Table**:
   - View all registered users with ID, tenant, email, role, and active status
-  - Change user roles (owner, manager, member, client) via dropdown — owner-only
-  - Deactivate users with confirmation dialog — owner-only
+  - Change user roles (owner, manager, member, client) via dropdown - owner-only
+  - Deactivate users with confirmation dialog - owner-only
   - Visual indicators for user status (active/inactive) and role badges
   - Current user is protected from self-demotion and self-deactivation
   - Prevents removal of the last active owner to avoid system lockout
@@ -480,42 +480,42 @@ Configure the stack via environment variables or a `.env` file in the project ro
 ## Key API Endpoints
 
 ### Authentication & User Management
-*   `POST /api/v1/auth/signup` — Register a new user with optional role (`owner`, `manager`, `member`, `client`). Defaults to `member`.
-*   `POST /api/v1/auth/login` — Authenticate with JSON body (`email`, `password`) and receive a JWT token
-*   `GET /api/v1/admin/users` — List all users (owner only)
-*   `PUT /api/v1/admin/users/{user_id}/role` — Change user role (owner only)
-*   `DELETE /api/v1/admin/users/{user_id}` — Deactivate user (owner only)
+*   `POST /api/v1/auth/signup` - Register a new user with optional role (`owner`, `manager`, `member`, `client`). Defaults to `member`.
+*   `POST /api/v1/auth/login` - Authenticate with JSON body (`email`, `password`) and receive a JWT token
+*   `GET /api/v1/admin/users` - List all users (owner only)
+*   `PUT /api/v1/admin/users/{user_id}/role` - Change user role (owner only)
+*   `DELETE /api/v1/admin/users/{user_id}` - Deactivate user (owner only)
 
 ### Clients
-*   `POST /api/v1/clients/` — Create a client (owner, manager). Accepts optional `reference_id`; if omitted, a sequential `CID-XXXX` ID is auto-generated per tenant.
-*   `GET /api/v1/clients/{tenant_id}` — List clients for a tenant (all roles)
+*   `POST /api/v1/clients/` - Create a client (owner, manager). Accepts optional `reference_id`; if omitted, a sequential `CID-XXXX` ID is auto-generated per tenant.
+*   `GET /api/v1/clients/{tenant_id}` - List clients for a tenant (all roles)
 
 ### Projects
-*   `POST /api/v1/projects/` — Create a project (owner, manager). The `client_id` field accepts either the internal UUID or the human-readable `reference_id` (e.g., `CID-0001`).
-*   `GET /api/v1/projects/{tenant_id}` — List projects for a tenant (all roles)
-*   `POST /api/v1/projects/{project_id}/scope` — Scope a project with landing-page workflow output (owner, manager)
+*   `POST /api/v1/projects/` - Create a project (owner, manager). The `client_id` field accepts either the internal UUID or the human-readable `reference_id` (e.g., `CID-0001`).
+*   `GET /api/v1/projects/{tenant_id}` - List projects for a tenant (all roles)
+*   `POST /api/v1/projects/{project_id}/scope` - Scope a project with landing-page workflow output (owner, manager)
 
 ### Leads
-*   `POST /api/v1/leads/` — Create a lead (owner, manager, member)
-*   `GET /api/v1/leads/{tenant_id}` — List leads for a tenant (all roles)
+*   `POST /api/v1/leads/` - Create a lead (owner, manager, member)
+*   `GET /api/v1/leads/{tenant_id}` - List leads for a tenant (all roles)
 
 ### Invoices
-*   `POST /api/v1/invoices/` — Create an invoice (owner, manager, member)
-*   `GET /api/v1/invoices/project/{project_id}` — List invoices for a project (all roles)
+*   `POST /api/v1/invoices/` - Create an invoice (owner, manager, member)
+*   `GET /api/v1/invoices/project/{project_id}` - List invoices for a project (all roles)
 
 ### Workflows & Agents
-*   `POST /api/v1/workflows/{project_id}/landing-page` — Run landing-page copy workflow (owner, manager, member)
-*   `POST /agents/landing-page` — Direct agents microservice endpoint for landing-page copy
-*   `POST /agents/ad-campaign` — Direct agents microservice endpoint for ad campaign generation
-*   `GET /agents/healthz` — Agents service health check
+*   `POST /api/v1/workflows/{project_id}/landing-page` - Run landing-page copy workflow (owner, manager, member)
+*   `POST /agents/landing-page` - Direct agents microservice endpoint for landing-page copy
+*   `POST /agents/ad-campaign` - Direct agents microservice endpoint for ad campaign generation
+*   `GET /agents/healthz` - Agents service health check
 
 ### Sentinel Policy Scanning
-*   `POST /internal/sentinel/scan` — Internal policy scan endpoint
-*   `GET /api/v1/sentinel-events/project/{project_id}` — List Sentinel events for a project (all roles)
+*   `POST /internal/sentinel/scan` - Internal policy scan endpoint
+*   `GET /api/v1/sentinel-events/project/{project_id}` - List Sentinel events for a project (all roles)
 
 ### Health
-*   `GET /healthz` — Liveness probe
-*   `GET /api/v1/health/` — Readiness + database check
+*   `GET /healthz` - Liveness probe
+*   `GET /api/v1/health/` - Readiness + database check
 
 ---
 
