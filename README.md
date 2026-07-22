@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/app/public/logo.svg" alt="AI Agency OS Logo" width="650">
+  <img src="frontend/app/public/AIAgencyOS_Logo.png" alt="AI Agency OS Logo" width="650">
 </p>
 
 # AI Agency OS — AI-Native Agency Operating System

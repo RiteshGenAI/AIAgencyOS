@@ -15,6 +15,10 @@ Required services:
 Override the URL via the ``TEST_DATABASE_URL`` environment variable, e.g.::
 
     TEST_DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/my_test_db pytest
+
+If the user in ``TEST_DATABASE_URL`` lacks ``CREATEDB`` privilege, set
+``TEST_DATABASE_ADMIN_URL`` to superuser credentials for the bootstrap step
+only (e.g. ``postgresql+psycopg2://postgres:postgres@localhost:5432/postgres``).
 """
 
 from __future__ import annotations
@@ -60,6 +64,28 @@ TEST_DATABASE_URL = os.environ.get(
 )
 os.environ["BACKEND_DATABASE_URL"] = TEST_DATABASE_URL
 
+# Use superuser credentials for the CREATE DATABASE bootstrap step.
+# If TEST_DATABASE_ADMIN_URL is not provided, try the common superuser
+# ``postgres:postgres`` first; if that fails (e.g. the user does not exist),
+# fall back to the same credentials as TEST_DATABASE_URL but connecting to
+# the maintenance ``postgres`` database.
+if "TEST_DATABASE_ADMIN_URL" in os.environ:
+    TEST_DATABASE_ADMIN_URL = os.environ["TEST_DATABASE_ADMIN_URL"]
+else:
+    _p = _urlparse.urlparse(TEST_DATABASE_URL)
+    TEST_DATABASE_ADMIN_URL = _urlparse.urlunparse(
+        _p._replace(netloc="postgres:postgres@{}".format(_p.hostname or "localhost"), path="/postgres")
+    )
+    try:
+        _admin_engine = create_engine(TEST_DATABASE_ADMIN_URL, isolation_level="AUTOCOMMIT")
+        with _admin_engine.connect() as _conn:
+            _conn.execute(text("SELECT 1"))
+        _admin_engine.dispose()
+    except Exception:
+        TEST_DATABASE_ADMIN_URL = _urlparse.urlunparse(
+            _p._replace(path="/postgres")
+        )
+
 
 # ---------------------------------------------------------------------------
 # Database bootstrap — ensure the test database exists, then connect.
@@ -73,7 +99,7 @@ def _split_admin_and_db(url: str) -> tuple[str, str]:
     return admin_url, db_name
 
 
-def _ensure_test_database_exists(url: str) -> None:
+def _ensure_test_database_exists(url: str, admin_url: str) -> None:
     parsed = _urlparse.urlparse(url)
     if not parsed.scheme.startswith("postgres"):
         raise RuntimeError(
@@ -84,7 +110,6 @@ def _ensure_test_database_exists(url: str) -> None:
     if not db_name:
         raise RuntimeError(f"TEST_DATABASE_URL is missing a database name: {url!r}")
 
-    admin_url, _ = _split_admin_and_db(url)
     admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
         with admin_engine.connect() as conn:
@@ -100,7 +125,7 @@ def _ensure_test_database_exists(url: str) -> None:
         admin_engine.dispose()
 
 
-_ensure_test_database_exists(TEST_DATABASE_URL)
+_ensure_test_database_exists(TEST_DATABASE_URL, TEST_DATABASE_ADMIN_URL)
 
 engine: Engine = create_engine(TEST_DATABASE_URL, future=True, pool_pre_ping=True)
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
