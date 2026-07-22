@@ -105,7 +105,7 @@ function App() {
               element={
                 user
                   ? user.role === 'owner'
-                    ? <AdminPage />
+                    ? <AdminPage currentUserId={user.id} />
                     : <Navigate to="/dashboard" />
                   : <Navigate to="/login" />
               }

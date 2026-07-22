@@ -20,16 +20,31 @@ export default function DashboardPage({ user }: Props) {
       setLoading(true)
       setError('')
       try {
-        const [p, l, i, e] = await Promise.all([
-          api.get<Project[]>('/projects/'),
-          api.get<Lead[]>('/leads/'),
-          api.get<Invoice[]>('/invoices/'),
-          api.get<SentinelEvent[]>('/sentinel-events/'),
+        // Stage 1: tenant-scoped list endpoints
+        const [p, l] = await Promise.all([
+          api.get<Project[]>(`/projects/${user.tenant_id}`),
+          api.get<Lead[]>(`/leads/${user.tenant_id}`),
         ])
         setProjects(p.data)
         setLeads(l.data)
-        setInvoices(i.data)
-        setEvents(e.data)
+
+        // Stage 2: invoices and Sentinel events are scoped to individual projects.
+        // Mirror the aggregation pattern used by InvoicesPage and SentinelEventsPage.
+        const projectList = p.data
+        const [invResults, evtResults] = await Promise.all([
+          Promise.all(
+            projectList.map((project) =>
+              api.get<Invoice[]>(`/invoices/project/${project.id}`).catch(() => ({ data: [] as Invoice[] }))
+            )
+          ),
+          Promise.all(
+            projectList.map((project) =>
+              api.get<SentinelEvent[]>(`/sentinel-events/project/${project.id}`).catch(() => ({ data: [] as SentinelEvent[] }))
+            )
+          ),
+        ])
+        setInvoices(invResults.flatMap((r) => r.data))
+        setEvents(evtResults.flatMap((r) => r.data))
       } catch (err: any) {
         setError(err?.message || 'Failed to load dashboard data')
       } finally {

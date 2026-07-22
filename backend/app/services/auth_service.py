@@ -6,11 +6,15 @@ from fastapi import HTTPException
 from jose import jwt
 from sqlalchemy.orm import Session
 
-from backend.app.core.config import settings
+from backend.app.core.config import Role, settings
 from backend.app.models.user import User
-from backend.app.schemas.user_schema import UserCreate, UserRead, Token
+from backend.app.schemas.user_schema import SignupRequest, Token, UserRead, UserSession
 
 ALGORITHM = "HS256"
+
+
+class LastActiveOwnerError(ValueError):
+    """Raised when an operation would leave no active owner."""
 
 
 def get_password_hash(password: str) -> str:
@@ -21,7 +25,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
-def create_user(db: Session, user_in: UserCreate) -> UserRead:
+def create_user(db: Session, user_in: SignupRequest) -> UserRead:
+    """Create a public signup user using the role supplied by the client."""
     existing = db.query(User).filter(User.email == user_in.email.strip().lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -56,7 +61,7 @@ def create_access_token(*, user: User, expires_delta: timedelta | None = None) -
         "exp": expire,
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-    return Token(access_token=encoded_jwt)
+    return Token(access_token=encoded_jwt, user=UserSession.model_validate(user))
 
 
 # ---------------------------------------------------------------------------
@@ -78,11 +83,24 @@ def list_users(
     return q.order_by(User.created_at.desc() if hasattr(User, "created_at") else User.email).offset(skip).limit(limit).all()
 
 
+def _is_last_active_owner(db: Session, user: User) -> bool:
+    return (
+        user.is_active
+        and user.role == Role.OWNER.value
+        and db.query(User)
+        .filter(User.is_active.is_(True), User.role == Role.OWNER.value)
+        .count()
+        <= 1
+    )
+
+
 def update_user_role(db: Session, *, user_id: str, new_role: str) -> User | None:
     """Change a user's role. Returns the updated user, or None if not found."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         return None
+    if new_role != Role.OWNER.value and _is_last_active_owner(db, user):
+        raise LastActiveOwnerError("Cannot remove the last active owner")
     user.role = new_role
     db.commit()
     db.refresh(user)
@@ -94,6 +112,8 @@ def deactivate_user(db: Session, *, user_id: str) -> bool:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         return False
+    if _is_last_active_owner(db, user):
+        raise LastActiveOwnerError("Cannot deactivate the last active owner")
     user.is_active = False
     db.commit()
     return True

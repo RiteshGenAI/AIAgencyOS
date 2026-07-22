@@ -86,11 +86,10 @@ const api = {
 }
 
 export async function login(email: string, password: string): Promise<TokenResponse> {
-  const body = new URLSearchParams({ username: email, password })
   const response = await fetch(`${baseURL}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   })
 
   const contentType = response.headers.get('content-type')

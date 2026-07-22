@@ -51,8 +51,7 @@ async def run_landing_page_agent(
     # 2) Research step
     query = f"{brief.product_name} {brief.product_description} benefits competitors"
     research_result = web_research_tool(WebResearchInput(query=query, max_results=8))
-    notes = "
-".join(research_result.snippets)
+    notes = "\n".join(research_result.snippets)
 
     research_scan = await sentinel_scan(
         SentinelScanInput(payload=notes, policy_id=policy_id, scan_type="output")
@@ -86,13 +85,10 @@ async def run_landing_page_agent(
 
     draft_payload = (
         draft.hero_headline
-        + "
-"
+        + "\n"
         + draft.hero_subheadline
-        + "
-"
-        + "
-".join(s.body for s in draft.sections)
+        + "\n"
+        + "\n".join(s.body for s in draft.sections)
     )
 
     draft_scan = await sentinel_scan(

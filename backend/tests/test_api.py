@@ -1,138 +1,119 @@
-import pytest
+"""General API tests: health, auth flow, and route smoke checks.
+
+All tests run against a real PostgreSQL test database (see ``conftest.py``).
+SQLite and any other non-PostgreSQL database are forbidden by policy.
+"""
+
+from __future__ import annotations
+
+import uuid
+
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from backend.app.main import app
-from backend.app.db.session import Base, get_db
-
-TEST_DB_URL = "sqlite:///./test_shared.db"
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def _unique_email(prefix: str) -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:12]}@example.com"
 
 
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    yield
-    from sqlalchemy.orm import close_all_sessions
-
-    close_all_sessions()
-    with engine.begin() as conn:
-        for tbl in reversed(Base.metadata.sorted_tables):
-            conn.execute(tbl.delete())
-
-
-@pytest.fixture
-def authenticated_client():
-    client.post(
-        "/api/v1/auth/signup",
-        json={
-            "tenant_id": "tenant-1",
-            "email": "auth@example.com",
-            "password": "password123",
-            "role": "member",
-        },
-    )
-    login = client.post(
-        "/api/v1/auth/login",
-        data={"username": "auth@example.com", "password": "password123"},
-    )
-    token = login.json()["access_token"]
-    authed = TestClient(app)
-    authed.headers.update({"Authorization": f"Bearer {token}"})
-    return authed
-
-
-def test_healthz():
+def test_healthz(client: TestClient):
     response = client.get("/healthz")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
 
-def test_health_db():
+def test_health_db(client: TestClient):
     response = client.get("/api/v1/health/")
     assert response.status_code == 200
     assert response.json()["database"] == "ok"
 
 
-def test_signup_and_login():
+def test_signup_and_login(client: TestClient):
+    email = _unique_email("signup")
     signup = client.post(
         "/api/v1/auth/signup",
         json={
             "tenant_id": "tenant-1",
-            "email": "test@example.com",
+            "email": email,
             "password": "password123",
-            "role": "member",
+            "role": "owner",
         },
     )
     assert signup.status_code == 200
-    assert signup.json()["email"] == "test@example.com"
+    assert signup.json()["email"] == email
+    assert signup.json()["role"] == "owner"
 
     login = client.post(
         "/api/v1/auth/login",
-        data={"username": "test@example.com", "password": "password123"},
+        json={"email": email, "password": "password123"},
     )
     assert login.status_code == 200
-    assert "access_token" in login.json()
+    data = login.json()
+    assert "access_token" in data
+    assert data["user"] == {
+        "id": signup.json()["id"],
+        "tenant_id": "tenant-1",
+        "email": email,
+        "role": "owner",
+    }
 
 
-def test_login_invalid():
+def test_signup_defaults_to_member_when_role_omitted(client: TestClient):
+    email = _unique_email("default")
+    signup = client.post(
+        "/api/v1/auth/signup",
+        json={
+            "tenant_id": "tenant-1",
+            "email": email,
+            "password": "password123",
+        },
+    )
+    assert signup.status_code == 200
+    assert signup.json()["role"] == "member"
+
+
+def test_login_invalid(client: TestClient):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "nope@example.com", "password": "wrong"},
+        json={"email": "nope@example.com", "password": "wrong"},
     )
     assert response.status_code == 401
 
 
-def test_signup_duplicate_email():
-    client.post(
-        "/api/v1/auth/signup",
-        json={"tenant_id": "tenant-1", "email": "dup@example.com", "password": "password123", "role": "member"},
-    )
-    response = client.post(
-        "/api/v1/auth/signup",
-        json={"tenant_id": "tenant-1", "email": "dup@example.com", "password": "password123", "role": "member"},
-    )
-    assert response.status_code == 400
-    assert "already registered" in response.json()["detail"]
+def test_signup_duplicate_email(client: TestClient):
+    email = _unique_email("dup")
+    body = {
+        "tenant_id": "tenant-1",
+        "email": email,
+        "password": "password123",
+    }
+    first = client.post("/api/v1/auth/signup", json=body)
+    assert first.status_code == 200
+    second = client.post("/api/v1/auth/signup", json=body)
+    assert second.status_code == 400
+    assert "already registered" in second.json()["detail"]
 
 
-def test_projects_require_auth():
+def test_projects_require_auth(client: TestClient):
     response = client.get("/api/v1/projects/demo-tenant")
     assert response.status_code == 401
 
 
-def test_create_invoice_missing_project():
-    # signup + login inline
-    client.post(
-        "/api/v1/auth/signup",
-        json={"tenant_id": "tenant-1", "email": "inv@example.com", "password": "password123", "role": "member"},
-    )
-    login = client.post("/api/v1/auth/login", data={"username": "inv@example.com", "password": "password123"})
-    token = login.json()["access_token"]
+def test_create_invoice_missing_project(client: TestClient, auth_headers):
+    headers = auth_headers(_unique_email("inv"), role="member")
     resp = client.post(
         "/api/v1/invoices/",
-        json={"tenant_id": "tenant-1", "project_id": "nonexistent", "amount": 100.0, "currency": "USD"},
-        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "tenant_id": "tenant-1",
+            "project_id": "nonexistent",
+            "amount": 100.0,
+            "currency": "USD",
+        },
+        headers=headers,
     )
     assert resp.status_code == 404
 
 
-def test_internal_sentinel_scan():
+def test_internal_sentinel_scan(client: TestClient):
     response = client.post(
         "/internal/sentinel/scan",
         json={

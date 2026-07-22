@@ -28,6 +28,19 @@ def _run_migrations():
             except Exception as exc:
                 logger.warning("Migration skipped: %s", exc)
 
+        # Normalize legacy "admin" role to "owner". The current RBAC model only
+        # recognizes owner/manager/member/client, so any leftover "admin" role
+        # causes every protected endpoint to return 403.
+        try:
+            result = conn.execute(
+                text("UPDATE users SET role = 'owner' WHERE role = 'admin'")
+            )
+            conn.commit()
+            if result.rowcount:
+                logger.info("Migrated %s user(s) from role 'admin' to 'owner'", result.rowcount)
+        except Exception as exc:
+            logger.warning("Admin role migration skipped: %s", exc)
+
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)

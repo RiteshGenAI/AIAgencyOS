@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
@@ -9,13 +9,20 @@ from backend.app.models.user import User
 from backend.app.schemas.user_schema import TokenPayload
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+# Use HTTPBearer (not OAuth2PasswordBearer) because the /auth/login endpoint
+# accepts a JSON body (`{"email", "password"}`) rather than the OAuth2 form
+# flow (`username` + `password`). HTTPBearer makes Swagger UI show a simple
+# "Bearer token" dialog instead of trying to call /login with form data.
+oauth2_scheme = HTTPBearer(auto_error=False)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+def get_current_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
     """Decode JWT and fetch current user.
 
-    Raises 401 if token invalid, 404 if user not found.
+    Raises 401 if token invalid or user not found.
     """
 
     credentials_exception = HTTPException(
@@ -24,8 +31,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    if creds is None or not creds.credentials:
+        raise credentials_exception
+
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(creds.credentials, settings.SECRET_KEY, algorithms=["HS256"])
         token_data = TokenPayload(**payload)
     except JWTError:
         raise credentials_exception

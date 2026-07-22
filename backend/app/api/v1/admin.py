@@ -12,6 +12,7 @@ from backend.app.db.session import get_db
 from backend.app.models.user import User
 from backend.app.schemas.user_schema import UserRead
 from backend.app.services.auth_service import (
+    LastActiveOwnerError,
     deactivate_user,
     list_users,
     update_user_role,
@@ -48,10 +49,16 @@ def admin_list_users(
 def admin_change_role(
     user_id: str,
     new_role: Role,
+    current_user: User = Depends(_require_owner),
     db: Session = Depends(get_db),
 ):
     """Change a user's role. Owners only."""
-    user = update_user_role(db, user_id=user_id, new_role=new_role.value)
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot change your own role")
+    try:
+        user = update_user_role(db, user_id=user_id, new_role=new_role.value)
+    except LastActiveOwnerError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return UserRead.model_validate(user)
@@ -61,9 +68,18 @@ def admin_change_role(
     "/users/{user_id}",
     dependencies=[Depends(_require_owner)],
 )
-def admin_deactivate_user(user_id: str, db: Session = Depends(get_db)):
+def admin_deactivate_user(
+    user_id: str,
+    current_user: User = Depends(_require_owner),
+    db: Session = Depends(get_db),
+):
     """Soft-deactivate a user. Owners only."""
-    ok = deactivate_user(db, user_id=user_id)
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+    try:
+        ok = deactivate_user(db, user_id=user_id)
+    except LastActiveOwnerError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not ok:
         raise HTTPException(status_code=404, detail="User not found")
     return {"ok": True}

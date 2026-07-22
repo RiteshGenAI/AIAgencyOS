@@ -52,6 +52,7 @@ export type SentinelEvent = {
   tenant_id: string
   project_id: string | null
   scan_type: string
+  entity_type: string
   risk_score: number
   issues: string | null
   payload: any
