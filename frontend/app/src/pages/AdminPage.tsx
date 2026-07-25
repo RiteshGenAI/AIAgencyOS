@@ -36,12 +36,14 @@ export default function AdminPage({ currentUserId }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [skip, setSkip] = useState(0)
+  const limit = 50
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
-      const res = await api.get<AdminUser[]>('/admin/users')
+      const res = await api.get<AdminUser[]>(`/admin/users?skip=${skip}&limit=${limit}`)
       setUsers(res.data)
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || 'Failed to load users')
@@ -50,9 +52,12 @@ export default function AdminPage({ currentUserId }: Props) {
     }
   }
 
+  const nextPage = () => setSkip((s) => s + limit)
+  const prevPage = () => setSkip((s) => Math.max(0, s - limit))
+
   useEffect(() => {
     load()
-  }, [])
+  }, [skip])
 
   const changeRole = async (userId: string, newRole: Role) => {
     setPendingId(userId)
@@ -177,6 +182,28 @@ export default function AdminPage({ currentUserId }: Props) {
             </tbody>
           </table>
         </div>
+
+        {(skip > 0 || users.length >= limit) && (
+          <div className="flex items-center justify-between pt-4">
+            <button
+              onClick={prevPage}
+              disabled={skip === 0}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-slate-500">
+              Showing {skip + 1}-{skip + users.length}
+            </span>
+            <button
+              onClick={nextPage}
+              disabled={users.length < limit}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

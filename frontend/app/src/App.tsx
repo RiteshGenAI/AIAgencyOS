@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
+import ErrorBoundary from './components/ErrorBoundary'
 import { setToken } from './lib/api'
 import type { TokenResponse, UserSession } from './types'
 
@@ -70,63 +71,65 @@ function App() {
             </div>
           }
         >
-          <Routes>
-            <Route
-              path="/login"
-              element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />}
-            />
-            <Route
-              path="/forgot-password"
-              element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordPage />}
-            />
-            <Route
-              path="/reset-password"
-              element={user ? <Navigate to="/dashboard" /> : <ResetPasswordPage />}
-            />
-            <Route
-              path="/verify-email"
-              element={user ? <Navigate to="/dashboard" /> : <VerifyEmailPage />}
-            />
-            <Route
-              path="/dashboard"
-              element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/projects"
-              element={user ? <ProjectsPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/projects/:projectId"
-              element={user ? <ProjectPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/leads"
-              element={user ? <LeadsPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/invoices"
-              element={user ? <InvoicesPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/workflows"
-              element={user ? <WorkflowsPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/sentinel-events"
-              element={user ? <SentinelEventsPage user={user} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/admin"
-              element={
-                user
-                  ? user.role === 'owner'
-                    ? <AdminPage currentUserId={user.id} />
-                    : <Navigate to="/dashboard" />
-                  : <Navigate to="/login" />
-              }
-            />
-            <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route
+                path="/login"
+                element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />}
+              />
+              <Route
+                path="/forgot-password"
+                element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordPage />}
+              />
+              <Route
+                path="/reset-password"
+                element={user ? <Navigate to="/dashboard" /> : <ResetPasswordPage />}
+              />
+              <Route
+                path="/verify-email"
+                element={user ? <Navigate to="/dashboard" /> : <VerifyEmailPage />}
+              />
+              <Route
+                path="/dashboard"
+                element={user ? <DashboardPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/projects"
+                element={user ? <ProjectsPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/projects/:projectId"
+                element={user ? <ProjectPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/leads"
+                element={user ? <LeadsPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/invoices"
+                element={user ? <InvoicesPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/workflows"
+                element={user ? <WorkflowsPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/sentinel-events"
+                element={user ? <SentinelEventsPage user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/admin"
+                element={
+                  user
+                    ? user.role === 'owner'
+                      ? <AdminPage currentUserId={user.id} />
+                      : <Navigate to="/dashboard" />
+                    : <Navigate to="/login" />
+                }
+              />
+              <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} />} />
+            </Routes>
+          </ErrorBoundary>
         </Suspense>
       </div>
     </div>

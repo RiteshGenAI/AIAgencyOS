@@ -56,6 +56,6 @@ def update_project_scope(
     return ProjectRead.model_validate(project)
 
 
-def list_projects(db: Session, tenant_id: str) -> list[ProjectRead]:
+def list_projects(db: Session, tenant_id: str, skip: int = 0, limit: int = 100) -> list[ProjectRead]:
     q = db.query(Project).filter(Project.tenant_id == tenant_id)
-    return [ProjectRead.model_validate(x) for x in q.all()]
+    return [ProjectRead.model_validate(x) for x in q.offset(skip).limit(limit).all()]

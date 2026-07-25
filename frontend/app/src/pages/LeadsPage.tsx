@@ -17,13 +17,15 @@ export default function LeadsPage({ user }: Props) {
   const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [clientId, setClientId] = useState('')
+  const [skip, setSkip] = useState(0)
+  const limit = 50
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
       const [{ data: leadsData }, { data: clientsData }] = await Promise.all([
-        api.get<Lead[]>(`/leads/${user.tenant_id}`),
+        api.get<Lead[]>(`/leads/${user.tenant_id}?skip=${skip}&limit=${limit}`),
         api.get<Client[]>(`/clients/${user.tenant_id}`),
       ])
       setLeads(leadsData)
@@ -35,9 +37,12 @@ export default function LeadsPage({ user }: Props) {
     }
   }
 
+  const nextPage = () => setSkip((s) => s + limit)
+  const prevPage = () => setSkip((s) => Math.max(0, s - limit))
+
   useEffect(() => {
     void load()
-  }, [user.tenant_id])
+  }, [user.tenant_id, skip])
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -179,6 +184,28 @@ export default function LeadsPage({ user }: Props) {
         {leads.length === 0 && !creating && (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center sm:col-span-2 lg:col-span-3">
             <p className="text-sm text-slate-400">No leads yet.</p>
+          </div>
+        )}
+
+        {(skip > 0 || leads.length >= limit) && (
+          <div className="flex items-center justify-between pt-4">
+            <button
+              onClick={prevPage}
+              disabled={skip === 0}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-slate-500">
+              Showing {skip + 1}-{skip + leads.length}
+            </span>
+            <button
+              onClick={nextPage}
+              disabled={leads.length < limit}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Role
@@ -38,9 +38,11 @@ async def list_project_invoices_endpoint(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ) -> list[InvoiceRead]:
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         return []
     ensure_tenant(current_user, project.tenant_id)
-    return list_invoices_for_project(db, project_id)
+    return list_invoices_for_project(db, project_id, skip=skip, limit=limit)

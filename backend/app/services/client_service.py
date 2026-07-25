@@ -58,9 +58,9 @@ def create_client(db: Session, client_in: ClientCreate) -> ClientRead:
     return ClientRead.model_validate(client)
 
 
-def list_clients(db: Session, tenant_id: str) -> list[ClientRead]:
+def list_clients(db: Session, tenant_id: str, skip: int = 0, limit: int = 100) -> list[ClientRead]:
     q = db.query(Client).filter(Client.tenant_id == tenant_id)
-    return [ClientRead.model_validate(c) for c in q.all()]
+    return [ClientRead.model_validate(c) for c in q.offset(skip).limit(limit).all()]
 
 
 def get_client_by_reference(db: Session, tenant_id: str, reference_id: str) -> Client | None:

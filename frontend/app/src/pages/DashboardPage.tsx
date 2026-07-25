@@ -20,10 +20,9 @@ export default function DashboardPage({ user }: Props) {
       setLoading(true)
       setError('')
       try {
-        // Stage 1: tenant-scoped list endpoints
         const [p, l] = await Promise.all([
-          api.get<Project[]>(`/projects/${user.tenant_id}`),
-          api.get<Lead[]>(`/leads/${user.tenant_id}`),
+          api.get<Project[]>(`/projects/${user.tenant_id}?skip=0&limit=50`),
+          api.get<Lead[]>(`/leads/${user.tenant_id}?skip=0&limit=50`),
         ])
         setProjects(p.data)
         setLeads(l.data)

@@ -20,6 +20,6 @@ def create_invoice(db: Session, invoice_in: InvoiceCreate) -> InvoiceRead:
     return InvoiceRead.model_validate(invoice)
 
 
-def list_invoices_for_project(db: Session, project_id: str) -> list[InvoiceRead]:
+def list_invoices_for_project(db: Session, project_id: str, skip: int = 0, limit: int = 100) -> list[InvoiceRead]:
     q = db.query(Invoice).filter(Invoice.project_id == project_id)
-    return [InvoiceRead.model_validate(x) for x in q.all()]
+    return [InvoiceRead.model_validate(x) for x in q.offset(skip).limit(limit).all()]

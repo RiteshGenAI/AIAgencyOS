@@ -38,6 +38,6 @@ def create_lead(db: Session, lead_in: LeadCreate) -> LeadRead:
     return LeadRead.model_validate(lead)
 
 
-def list_leads(db: Session, tenant_id: str) -> list[LeadRead]:
+def list_leads(db: Session, tenant_id: str, skip: int = 0, limit: int = 100) -> list[LeadRead]:
     q = db.query(Lead).filter(Lead.tenant_id == tenant_id)
-    return [LeadRead.model_validate(x) for x in q.all()]
+    return [LeadRead.model_validate(x) for x in q.offset(skip).limit(limit).all()]

@@ -17,13 +17,15 @@ export default function ProjectsPage({ user }: Props) {
   const [clientId, setClientId] = useState('')
   const [newClientName, setNewClientName] = useState('')
   const [creatingClient, setCreatingClient] = useState(false)
+  const [skip, setSkip] = useState(0)
+  const limit = 50
 
   const load = async () => {
     setLoading(true)
     setError('')
     try {
       const [{ data: proj }, { data: cli }] = await Promise.all([
-        api.get<Project[]>(`/projects/${user.tenant_id}`),
+        api.get<Project[]>(`/projects/${user.tenant_id}?skip=${skip}&limit=${limit}`),
         api.get<Client[]>(`/clients/${user.tenant_id}`),
       ])
       setProjects(proj)
@@ -34,6 +36,9 @@ export default function ProjectsPage({ user }: Props) {
       setLoading(false)
     }
   }
+
+  const nextPage = () => setSkip((s) => s + limit)
+  const prevPage = () => setSkip((s) => Math.max(0, s - limit))
 
   useEffect(() => {
     void load()
@@ -270,6 +275,28 @@ export default function ProjectsPage({ user }: Props) {
               className="mt-3 text-xs font-bold text-cyan-600 hover:underline"
             >
               Create your first project →
+            </button>
+          </div>
+        )}
+
+        {(skip > 0 || projects.length >= limit) && (
+          <div className="flex items-center justify-between pt-4">
+            <button
+              onClick={prevPage}
+              disabled={skip === 0}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-slate-500">
+              Showing {skip + 1}-{skip + projects.length}
+            </span>
+            <button
+              onClick={nextPage}
+              disabled={projects.length < limit}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Next
             </button>
           </div>
         )}

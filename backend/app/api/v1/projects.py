@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import Role
@@ -40,9 +40,11 @@ async def list_projects_endpoint(
     tenant_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ) -> list[ProjectRead]:
     ensure_tenant(current_user, tenant_id)
-    return list_projects(db, tenant_id)
+    return list_projects(db, tenant_id, skip=skip, limit=limit)
 
 
 @router.post(

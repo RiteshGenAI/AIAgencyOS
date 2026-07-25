@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.core.config import settings
-from backend.app.core.logging import setup_logging
+from backend.app.core.logging import setup_logging, CorrelationIdMiddleware
 from backend.app.core.middleware import (
     ErrorHandlingMiddleware,
     RateLimitingMiddleware,
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
+    app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(RateLimitingMiddleware)
