@@ -6,6 +6,10 @@ class LeadBase(BaseModel):
     tenant_id: str
     client_id: Optional[str] = None
     source: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
     raw_text: str
 
 

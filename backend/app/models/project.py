@@ -12,6 +12,7 @@ class Project(Base):
     client_id = Column(String, ForeignKey("clients.id"), nullable=False)
 
     name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
     status = Column(String, nullable=False, default="draft")
 
     # simple JSON/text field for scoped summary (for demo purposes)

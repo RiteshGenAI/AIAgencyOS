@@ -7,8 +7,8 @@ type Props = {
 }
 
 export default function LoginPage({ onLogin }: Props) {
-  const [email, setEmail] = useState('admin@agency.local')
-  const [password, setPassword] = useState('admin1234')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 

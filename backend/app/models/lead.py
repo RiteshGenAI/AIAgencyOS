@@ -12,6 +12,10 @@ class Lead(Base):
     client_id = Column(String, ForeignKey("clients.id"), nullable=True)
 
     source = Column(String, nullable=True)
+    name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
     raw_text = Column(Text, nullable=False)
     status = Column(String, nullable=False, default="new")
 

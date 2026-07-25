@@ -56,7 +56,8 @@ async function request(path: string, options: RequestInit = {}) {
   const data = contentType && contentType.includes('application/json') ? await response.json() : await response.text()
 
   if (!response.ok) {
-    const error: any = new Error(data?.detail || 'Request failed')
+    const message = typeof data?.detail === 'string' ? data.detail : data?.detail ? JSON.stringify(data.detail) : 'Request failed'
+    const error: any = new Error(message)
     error.response = { status: response.status, data }
     throw error
   }
@@ -96,7 +97,8 @@ export async function login(email: string, password: string): Promise<TokenRespo
   const data = contentType && contentType.includes('application/json') ? await response.json() : await response.text()
 
   if (!response.ok) {
-    throw new Error(data?.detail || 'Login failed')
+    const message = typeof data?.detail === 'string' ? data.detail : data?.detail ? JSON.stringify(data.detail) : 'Login failed'
+    throw new Error(message)
   }
 
   return data as TokenResponse

@@ -1,4 +1,3 @@
-from typing import Optional
 from pydantic import BaseModel
 
 
@@ -6,6 +5,7 @@ class ProjectBase(BaseModel):
     tenant_id: str
     client_id: str
     name: str
+    description: str | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -15,7 +15,7 @@ class ProjectCreate(ProjectBase):
 class ProjectRead(ProjectBase):
     id: str
     status: str
-    scoped_summary: Optional[str] = None
+    scoped_summary: str | None = None
 
     class Config:
         from_attributes = True

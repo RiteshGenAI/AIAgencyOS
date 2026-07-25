@@ -25,6 +25,10 @@ def create_lead(db: Session, lead_in: LeadCreate) -> LeadRead:
         tenant_id=lead_in.tenant_id,
         client_id=resolved_client_id,
         source=lead_in.source,
+        name=lead_in.name,
+        email=lead_in.email,
+        phone=lead_in.phone,
+        notes=lead_in.notes,
         raw_text=lead_in.raw_text,
         status="new",
     )

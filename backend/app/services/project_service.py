@@ -34,6 +34,7 @@ def create_project(db: Session, project_in: ProjectCreate) -> ProjectRead:
         tenant_id=project_in.tenant_id,
         client_id=resolved_client_id,
         name=project_in.name,
+        description=project_in.description,
         status="draft",
     )
     db.add(project)

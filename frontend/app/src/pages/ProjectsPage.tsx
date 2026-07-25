@@ -12,9 +12,8 @@ export default function ProjectsPage({ user }: Props) {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [creatingProject, setCreatingProject] = useState(false)
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
   const [clientId, setClientId] = useState('')
   const [newClientName, setNewClientName] = useState('')
   const [creatingClient, setCreatingClient] = useState(false)
@@ -40,8 +39,18 @@ export default function ProjectsPage({ user }: Props) {
     void load()
   }, [user.tenant_id])
 
-  const createClient = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const resetForm = () => {
+    setName('')
+    setClientId('')
+    setNewClientName('')
+    setCreatingClient(false)
+    setCreatingProject(false)
+    setError('')
+  }
+
+  const createClient = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!newClientName.trim()) return
     setError('')
     try {
       const { data } = await api.post<Client>('/clients/', {
@@ -52,6 +61,9 @@ export default function ProjectsPage({ user }: Props) {
       setClientId(data.reference_id)
       setNewClientName('')
       setCreatingClient(false)
+      if (clients.length === 0) {
+        setCreatingProject(true)
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to create client')
     }
@@ -65,15 +77,22 @@ export default function ProjectsPage({ user }: Props) {
         tenant_id: user.tenant_id,
         client_id: clientId,
         name,
-        description,
       })
       setName('')
-      setDescription('')
       setClientId('')
-      setCreating(false)
+      setCreatingProject(false)
+      setCreatingClient(false)
       await load()
     } catch (err: any) {
       setError(err?.message || 'Failed to create project')
+    }
+  }
+
+  const startCreate = () => {
+    if (clients.length === 0) {
+      setCreatingClient(true)
+    } else {
+      setCreatingProject(true)
     }
   }
 
@@ -94,10 +113,10 @@ export default function ProjectsPage({ user }: Props) {
           <p className="text-sm text-slate-500">Manage agency projects and client work.</p>
         </div>
         <button
-          onClick={() => setCreating(!creating)}
+          onClick={creatingProject ? resetForm : startCreate}
           className="rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:brightness-105 shadow-md shadow-cyan-600/10 transition duration-200"
         >
-          {creating ? 'Cancel' : 'Create Project'}
+          {creatingProject ? 'Cancel' : 'Create Project'}
         </button>
       </div>
 
@@ -107,7 +126,39 @@ export default function ProjectsPage({ user }: Props) {
         </div>
       )}
 
-      {creating && (
+      {!creatingProject && creatingClient && clients.length === 0 && (
+        <form onSubmit={createClient} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <h3 className="text-lg font-bold text-slate-900">Create Client First</h3>
+          <p className="text-sm text-slate-500">You need to create a client before adding a project.</p>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Client Name</label>
+            <input
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
+              value={newClientName}
+              onChange={(e) => setNewClientName(e.target.value)}
+              placeholder="Client name"
+              required
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:brightness-105 transition"
+            >
+              Create Client
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {creatingProject && clients.length > 0 && (
         <form onSubmit={create} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
           <h3 className="text-lg font-bold text-slate-900">New Project</h3>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -137,26 +188,19 @@ export default function ProjectsPage({ user }: Props) {
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Description</label>
-            <textarea
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
 
           {!creatingClient ? (
-            <button
-              type="button"
-              onClick={() => setCreatingClient(true)}
-              className="text-xs font-bold text-cyan-600 hover:underline"
-            >
-              + New Client
-            </button>
+            <div className="flex gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setCreatingClient(true)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                + New Client
+              </button>
+            </div>
           ) : (
-            <form onSubmit={createClient} className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
               <h4 className="text-sm font-bold text-slate-900">New Client</h4>
               <input
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 outline-none transition"
@@ -167,7 +211,8 @@ export default function ProjectsPage({ user }: Props) {
               />
               <div className="flex gap-2">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={createClient}
                   className="rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:brightness-105 transition"
                 >
                   Create Client
@@ -183,7 +228,7 @@ export default function ProjectsPage({ user }: Props) {
                   Cancel
                 </button>
               </div>
-            </form>
+            </div>
           )}
 
           <button
@@ -217,11 +262,11 @@ export default function ProjectsPage({ user }: Props) {
             </span>
           </Link>
         ))}
-        {projects.length === 0 && !creating && (
+        {projects.length === 0 && !creatingProject && !creatingClient && (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
             <p className="text-sm text-slate-400">No projects yet.</p>
             <button
-              onClick={() => setCreating(true)}
+              onClick={startCreate}
               className="mt-3 text-xs font-bold text-cyan-600 hover:underline"
             >
               Create your first project →

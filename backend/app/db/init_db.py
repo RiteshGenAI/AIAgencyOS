@@ -39,7 +39,12 @@ def _generate_next_client_reference_id(conn, tenant_id: str) -> str:
 def _run_migrations():
     migrations = [
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS scoped_summary TEXT",
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT",
         "ALTER TABLE clients ADD COLUMN IF NOT EXISTS reference_id VARCHAR",
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS name VARCHAR",
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS email VARCHAR",
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS phone VARCHAR",
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS notes TEXT",
     ]
     with engine.connect() as conn:
         for sql in migrations:
