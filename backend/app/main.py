@@ -36,10 +36,10 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-    app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(RateLimitingMiddleware)
+    app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
