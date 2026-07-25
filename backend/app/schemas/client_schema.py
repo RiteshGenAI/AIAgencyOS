@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
@@ -14,5 +16,7 @@ class ClientCreate(ClientBase):
 class ClientRead(ClientBase):
     id: str
     reference_id: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

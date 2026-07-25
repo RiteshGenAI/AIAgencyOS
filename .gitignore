@@ -62,3 +62,6 @@ infra/terraform/.terraform/
 infra/terraform/*.tfstate
 infra/terraform/*.tfstate.*
 infra/terraform/tfplan
+
+# Kilo
+.kilo/

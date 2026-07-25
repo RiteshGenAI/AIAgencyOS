@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class LeadBase(BaseModel):
@@ -20,6 +21,7 @@ class LeadCreate(LeadBase):
 class LeadRead(LeadBase):
     id: str
     status: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

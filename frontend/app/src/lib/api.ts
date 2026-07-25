@@ -104,4 +104,24 @@ export async function login(email: string, password: string): Promise<TokenRespo
   return data as TokenResponse
 }
 
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email })
+  return data
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/auth/reset-password', { token, new_password: newPassword })
+  return data
+}
+
+export async function verifyEmail(token: string): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/auth/verify-email', { token })
+  return data
+}
+
+export async function getVerificationStatus(): Promise<{ is_verified: boolean }> {
+  const { data } = await api.get<{ is_verified: boolean }>('/auth/verification-status')
+  return data
+}
+
 export default api

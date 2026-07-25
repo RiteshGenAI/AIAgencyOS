@@ -1,4 +1,6 @@
-from sqlalchemy import Column, String, Text, Float, ForeignKey
+from datetime import datetime, timezone
+
+from sqlalchemy import Column, String, Text, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 from backend.app.db.session import Base
@@ -20,3 +22,4 @@ class SentinelEvent(Base):
     project_id = Column(String, ForeignKey("projects.id"), nullable=True)
 
     project = relationship("Project")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

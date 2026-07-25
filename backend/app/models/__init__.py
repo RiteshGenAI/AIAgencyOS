@@ -6,3 +6,4 @@ from backend.app.models.project import Project
 from backend.app.models.user import User
 from backend.app.models.sentinel_event import SentinelEvent
 from backend.app.models.invoice import Invoice
+from backend.app.models.password_reset_token import PasswordResetToken

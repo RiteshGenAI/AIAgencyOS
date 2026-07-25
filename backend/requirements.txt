@@ -8,5 +8,6 @@ email-validator
 python-jose[cryptography]
 python-multipart
 bcrypt
+alembic
 pytest
 httpx

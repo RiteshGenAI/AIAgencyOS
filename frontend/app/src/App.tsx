@@ -13,6 +13,9 @@ const InvoicesPage = lazy(() => import('./pages/InvoicesPage'))
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'))
 const SentinelEventsPage = lazy(() => import('./pages/SentinelEventsPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 
 function App() {
   const [user, setUser] = useState<UserSession | null>(null)
@@ -71,6 +74,18 @@ function App() {
             <Route
               path="/login"
               element={user ? <Navigate to="/dashboard" /> : <LoginPage onLogin={handleLogin} />}
+            />
+            <Route
+              path="/forgot-password"
+              element={user ? <Navigate to="/dashboard" /> : <ForgotPasswordPage />}
+            />
+            <Route
+              path="/reset-password"
+              element={user ? <Navigate to="/dashboard" /> : <ResetPasswordPage />}
+            />
+            <Route
+              path="/verify-email"
+              element={user ? <Navigate to="/dashboard" /> : <VerifyEmailPage />}
             />
             <Route
               path="/dashboard"
