@@ -558,6 +558,23 @@ Before deploying to production:
 
 ---
 
+## Running Your Own Instance
+
+This project is designed to be self-hosted and forked. The defaults assume local development, but production setup requires overriding secrets and disabling auto-seeding.
+
+**Minimum setup for a custom fork:**
+1. Copy `backend/.env.example` to `backend/.env` and set `BACKEND_SECRET_KEY` (`openssl rand -hex 32`), `POSTGRES_PASSWORD`, and `BACKEND_ENV=cloud`.
+2. Set `BACKEND_SEED_ADMIN=false` in production so no default admin is auto-created.
+3. Set `BACKEND_CORS_ORIGINS` to your domain(s).
+4. Run `docker compose up --build` for local or `docker compose -f docker-compose.prod.yml up --build -d` for production.
+5. Create the first owner via `POST /api/v1/auth/signup`.
+
+**Decoupling from optional infrastructure:**
+- **Sentinel**: The backend ships with a Sentinel proxy endpoint (`/internal/sentinel/scan`). Forks that replace Sentinel can remove `sentinel_event_service.py`, the `/internal/sentinel/scan` router, and the `BACKEND_SENTINEL_PROXY_ENABLED` check. The agents service only uses `STRANDS_SENTINEL_BASE_URL` for optional scanning.
+- **LLM provider**: Change `LLM_PROVIDER`, `LLM_MODEL`, `LLM_BASE_URL`, and `LLM_API_KEY` to use OpenAI, Anthropic, or a self-hosted model instead of the default Ollama configuration.
+- **Branding**: Replace `frontend/app/public/AIAgencyOS_Logo.png` and update the `name` field in `frontend/app/package.json`. Update the title and styling in `frontend/app/index.html`.
+- **Multi-tenancy**: The system is tenant-scoped by default. Forks that need single-tenant operation can drop the `tenant_id` column, remove RBAC checks, and simplify the data models.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to AI Agency OS.

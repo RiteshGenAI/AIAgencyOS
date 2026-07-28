@@ -1,0 +1,21 @@
+AI Agency OS includes or depends on the following third-party software.
+This file is provided for attribution purposes.
+
+Licenses for dependencies are governed by their respective owners.
+See backend/requirements.txt, agents/requirements.txt, and frontend/app/package.json
+for the full list of dependencies and their licenses.
+
+Key frameworks and libraries used in this project include:
+- FastAPI (MIT)
+- SQLAlchemy (MIT)
+- Pydantic (MIT)
+- React (MIT)
+- Vite (MIT)
+- TailwindCSS (MIT)
+- PostgreSQL (PostgreSQL License)
+- Docker (Apache 2.0)
+- Terraform (BUSL-1.1)
+- Strands (Apache 2.0)
+- OpenAI SDK (Apache 2.0)
+- Anthropic SDK (MIT)
+- Ollama (MIT)

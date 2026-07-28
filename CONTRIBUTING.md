@@ -2,6 +2,12 @@
 
 Thank you for your interest in contributing to AI Agency OS! We appreciate your help in making this project better.
 
+There are two ways to use this codebase:
+1. **Fork it** for your own agency or product — rebrand, remove components you do not need, and customize freely under Apache 2.0.
+2. **Submit a PR upstream** — if you think your change would benefit all users, we encourage pull requests.
+
+Choose the path that fits your goal.
+
 Please review the following guidelines before you get started.
 
 ## Code of Conduct
@@ -33,6 +39,41 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 5. **Commit your changes** with descriptive commit messages (following [Conventional Commits](https://www.conventionalcommits.org/) is recommended).
 6. **Push to your fork** and submit a pull request (PR).
 7. Ensure your PR description clearly explains what you did and links to any related issues.
+
+---
+
+## Customizing This Fork
+
+If you are forking the repo for your own agency or product, consider these common customizations:
+
+### Rebranding
+- Replace `frontend/app/public/AIAgencyOS_Logo.png` with your logo.
+- Update `frontend/app/index.html` title and meta tags.
+- Update `frontend/app/package.json` `name` field.
+- Update the sidebar and application title references in the React components under `frontend/app/src/components/` and `frontend/app/src/pages/`.
+
+### Replacing Sentinel
+The internal policy scanner is optional. To remove it:
+- Delete `backend/app/services/sentinel_event_service.py`.
+- Remove the `/internal/sentinel/scan` router and related middleware checks.
+- Remove Sentinel event models and database tables.
+- Delete the [Sentinel Events](http://localhost:8000/api/v1/sentinel-events/project/{project_id}) page in the frontend.
+
+### Changing LLM Providers
+The agents service supports Ollama, OpenAI, and Anthropic via environment variables:
+```
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4o-mini
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=your-key
+```
+For Anthropic, set `LLM_PROVIDER=anthropic` and adjust `LLM_BASE_URL`.
+
+### Running Without Docker
+Each service can run natively:
+- Backend: `cd backend && pip install -r requirements.txt && uvicorn backend.app.main:app --reload`
+- Agents: `cd agents && pip install -r requirements.txt && uvicorn agents.app.main:app --reload`
+- Frontend: `cd frontend/app && npm install && npm run dev`
 
 ---
 

@@ -1,0 +1,29 @@
+# AI Agency OS Code Owners
+
+This file defines who reviews which parts of the codebase.
+
+## By Area
+
+### Backend (FastAPI, Python)
+*   **Path**: `backend/`
+*   **Owners**: @RiteshGenAI
+
+### Agents Service (Python, Strands)
+*   **Path**: `agents/`
+*   **Owners**: @RiteshGenAI
+
+### Frontend (React, TypeScript, Vite)
+*   **Path**: `frontend/`
+*   **Owners**: @RiteshGenAI
+
+### Infrastructure / Terraform
+*   **Path**: `infra/`
+*   **Owners**: @RiteshGenAI
+
+### Docker / Deployment
+*   **Path**: `docker-compose*.yml`, `.dockerignore`
+*   **Owners**: @RiteshGenAI
+
+### Documentation
+*   **Path**: `*.md`
+*   **Owners**: @RiteshGenAI
